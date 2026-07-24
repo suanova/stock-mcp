@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "stock-mcp"
+version = "0.1.0"
+description = "MCP server exposing the DSA 问股 (Agent Chat) ask_stock tool over Streamable HTTP."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "DSA" }]
+keywords = ["mcp", "stock", "agent", "ask-stock"]
+dependencies = [
+    "mcp>=1.2.0",
+    "httpx>=0.27",
+    "uvicorn>=0.27",
+    "anyio>=4.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+]
+
+[project.scripts]
+dsa-mcp-server = "stock_mcp.server:run"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/stock_mcp"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v"
+asyncio_mode = "auto"
