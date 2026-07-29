@@ -41,6 +41,7 @@ class Config:
     mcp_host: str
     mcp_port: int
     mcp_path: str
+    mcp_allowed_hosts: list[str]
 
     # Timeouts (seconds)
     api_timeout: float
@@ -65,8 +66,18 @@ class Config:
             raise ValueError(f"DSA_MCP_PATH must start with '/', got: {self.mcp_path!r}")
 
 
+def _parse_list(value: str | None) -> list[str]:
+    """Parse a comma-separated env-var value into a non-empty trimmed list."""
+    if not value or not value.strip():
+        return []
+    return [entry.strip() for entry in value.split(",") if entry.strip()]
+
+
 def load_config() -> Config:
     """Read configuration from environment variables."""
+    raw_hosts = os.getenv("DSA_MCP_ALLOWED_HOSTS", "")
+    mcp_allowed_hosts = _parse_list(raw_hosts)
+
     cfg = Config(
         api_base_url=os.getenv("DSA_API_BASE_URL", "http://127.0.0.1:8000"),
         auth_enabled=_get_bool("DSA_API_AUTH_ENABLED", False),
@@ -74,6 +85,7 @@ def load_config() -> Config:
         mcp_host=os.getenv("DSA_MCP_HOST", "127.0.0.1"),
         mcp_port=_get_int("DSA_MCP_PORT", 8765),
         mcp_path=os.getenv("DSA_MCP_PATH", "/mcp"),
+        mcp_allowed_hosts=mcp_allowed_hosts,
         api_timeout=float(_get_int("DSA_API_TIMEOUT", 30)),
         api_request_timeout=float(_get_int("DSA_API_REQUEST_TIMEOUT", 600)),
         log_level=os.getenv("DSA_MCP_LOG_LEVEL", "INFO").upper(),

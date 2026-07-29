@@ -63,7 +63,7 @@ DSA_API_BASE_URL=http://127.0.0.1:8000 DSA_API_AUTH_ENABLED=true DSA_API_PASSWOR
 | `DSA_API_PASSWORD` | *(empty)* | DSA admin password (required when auth enabled) |
 | `DSA_API_TIMEOUT` | `30` | Timeout for short calls (skills, login) |
 | `DSA_API_REQUEST_TIMEOUT` | `600` | Timeout for `ask_stock` (agent chat) |
-| `DSA_MCP_LOG_LEVEL` | `INFO` | Server log level |
+| `DSA_MCP_ALLOWED_HOSTS` | *(empty)* | Comma-separated extra Host header values allowed by DNS rebinding protection. Localhost entries are always included. |
 
 ## Client configuration
 
@@ -117,5 +117,7 @@ or use the DSA web Chat page directly.
 
 ## Security
 
-The server binds to `127.0.0.1` by default. Do not expose the MCP port publicly without
-auth — the MCP transport is designed for local/loopback use.
+The server binds to `127.0.0.1` by default. When binding to a public interface (`0.0.0.0`), the
+MCP SDK enforces DNS rebinding protection — only `Host` header values in the allowed list are
+accepted (see `DSA_MCP_ALLOWED_HOSTS`). Keep the allowed list as narrow as your use case
+requires.

@@ -16,6 +16,7 @@ import os
 from typing import Any, Optional
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
 from stock_mcp.config import Config, load_config
 from stock_mcp.dsa_client import DSAClient, DSAClientError
@@ -58,6 +59,20 @@ def build_server(config: Config, client: DSAClient) -> FastMCP:
             "strategies. The tool returns the agent's final text answer plus a session_id "
             "that can be passed back for multi-turn conversation. Requires the DSA API "
             "server to be running and reachable."
+        ),
+        transport_security=TransportSecuritySettings(
+            enable_dns_rebinding_protection=True,
+            allowed_hosts=[
+                "127.0.0.1:*",
+                "localhost:*",
+                "[::1]:*",
+                *config.mcp_allowed_hosts,
+            ],
+            allowed_origins=[
+                "http://127.0.0.1:*",
+                "http://localhost:*",
+                "http://[::1]:*",
+            ],
         ),
     )
 
