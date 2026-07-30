@@ -42,6 +42,7 @@ class Config:
     mcp_port: int
     mcp_path: str
     mcp_allowed_hosts: list[str]
+    mcp_stateless_http: bool
 
     # Timeouts (seconds)
     api_timeout: float
@@ -105,6 +106,7 @@ def load_config() -> Config:
         mcp_port=_get_int("DSA_MCP_PORT", 8765),
         mcp_path=os.getenv("DSA_MCP_PATH", "/mcp"),
         mcp_allowed_hosts=mcp_allowed_hosts,
+        mcp_stateless_http=_get_bool("DSA_MCP_STATELESS_HTTP", False),
         api_timeout=float(_get_int("DSA_API_TIMEOUT", 30)),
         api_request_timeout=float(_get_int("DSA_API_REQUEST_TIMEOUT", 600)),
         log_level=os.getenv("DSA_MCP_LOG_LEVEL", "INFO").upper(),

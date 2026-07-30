@@ -21,6 +21,7 @@ from typing import Any, Optional
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
+import uvicorn
 
 from stock_mcp.config import Config, load_config
 from stock_mcp.dsa_client import DSAClient, DSAClientError
@@ -123,6 +124,7 @@ def build_server(config: Config, client: DSAClient) -> FastMCP:
                 "http://[::1]:*",
             ],
         ),
+        stateless_http=config.mcp_stateless_http,
     )
 
     @mcp.tool()
@@ -232,12 +234,13 @@ def run() -> None:
         config.log_backup_count,
     )
     logger.info(
-        "stock-mcp starting: DSA API at %s (auth=%s), MCP at http://%s:%d%s",
+        "stock-mcp starting: DSA API at %s (auth=%s), MCP at http://%s:%d%s (stateless=%s)",
         config.api_base,
         "on" if config.auth_enabled else "off",
         config.mcp_host,
         config.mcp_port,
         config.mcp_path,
+        config.mcp_stateless_http,
     )
 
     client = DSAClient(config)
@@ -255,8 +258,6 @@ def run() -> None:
     # FastMCP's streamable HTTP transport returns an ASGI app; serve it with uvicorn.
     # The path FastMCP mounts the Streamable HTTP app at is controlled via run() kwargs
     # in newer SDK versions; mount_path must be URL-safe and start with '/'.
-    import uvicorn
-
     app = mcp.streamable_http_app()
 
     # The MCP Streamable HTTP endpoint is served at the app root; clients use

@@ -24,6 +24,7 @@ def _clear_env(monkeypatch):
         "DSA_MCP_LOG_FILE",
         "DSA_MCP_LOG_MAX_BYTES",
         "DSA_MCP_LOG_BACKUP_COUNT",
+        "DSA_MCP_STATELESS_HTTP",
     ):
         monkeypatch.delenv(name, raising=False)
 
@@ -35,6 +36,7 @@ def test_load_config_defaults():
     assert cfg.mcp_host == "127.0.0.1"
     assert cfg.mcp_port == 8765
     assert cfg.mcp_path == "/mcp"
+    assert cfg.mcp_stateless_http is False
     assert cfg.log_level == "INFO"
     assert cfg.log_file is None
     assert cfg.log_max_bytes == 10 * 1024 * 1024
@@ -71,6 +73,12 @@ def test_load_config_whitespace_log_file_is_none(monkeypatch):
     assert cfg.log_file is None
 
 
+def test_load_config_stateless_http(monkeypatch):
+    monkeypatch.setenv("DSA_MCP_STATELESS_HTTP", "true")
+    cfg = load_config()
+    assert cfg.mcp_stateless_http is True
+
+
 def test_load_config_invalid_log_max_bytes():
     cfg = Config(
         api_base_url="http://127.0.0.1:8000",
@@ -80,6 +88,7 @@ def test_load_config_invalid_log_max_bytes():
         mcp_port=8765,
         mcp_path="/mcp",
         mcp_allowed_hosts=[],
+        mcp_stateless_http=False,
         api_timeout=30.0,
         api_request_timeout=600.0,
         log_level="INFO",
@@ -100,6 +109,7 @@ def test_load_config_invalid_log_backup_count():
         mcp_port=8765,
         mcp_path="/mcp",
         mcp_allowed_hosts=[],
+        mcp_stateless_http=False,
         api_timeout=30.0,
         api_request_timeout=600.0,
         log_level="INFO",

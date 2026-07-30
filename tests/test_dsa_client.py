@@ -26,9 +26,14 @@ def _make_config(auth_enabled: bool = False, password: str = "") -> Config:
         mcp_host="127.0.0.1",
         mcp_port=8765,
         mcp_path="/mcp",
+        mcp_allowed_hosts=[],
+        mcp_stateless_http=False,
         api_timeout=30.0,
         api_request_timeout=120.0,
         log_level="INFO",
+        log_file=None,
+        log_max_bytes=10 * 1024 * 1024,
+        log_backup_count=3,
     )
 
 

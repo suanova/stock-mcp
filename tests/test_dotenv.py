@@ -16,6 +16,7 @@ def test_run_loads_dotenv_before_loading_config():
         mcp_port=8765,
         mcp_path="/mcp",
         mcp_allowed_hosts=[],
+        mcp_stateless_http=False,
         api_timeout=30.0,
         api_request_timeout=600.0,
         log_level="INFO",
