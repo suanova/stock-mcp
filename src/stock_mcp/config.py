@@ -49,6 +49,9 @@ class Config:
 
     # Logging
     log_level: str
+    log_file: str | None
+    log_max_bytes: int
+    log_backup_count: int
 
     @property
     def api_base(self) -> str:
@@ -64,6 +67,14 @@ class Config:
             )
         if not self.mcp_path.startswith("/"):
             raise ValueError(f"DSA_MCP_PATH must start with '/', got: {self.mcp_path!r}")
+        if self.log_max_bytes < 0:
+            raise ValueError(
+                "DSA_MCP_LOG_MAX_BYTES must be a non-negative integer"
+            )
+        if self.log_backup_count < 0:
+            raise ValueError(
+                "DSA_MCP_LOG_BACKUP_COUNT must be a non-negative integer"
+            )
 
 
 def _parse_list(value: str | None) -> list[str]:
@@ -78,6 +89,14 @@ def load_config() -> Config:
     raw_hosts = os.getenv("DSA_MCP_ALLOWED_HOSTS", "")
     mcp_allowed_hosts = _parse_list(raw_hosts)
 
+    log_file = os.getenv("DSA_MCP_LOG_FILE")
+    if log_file is not None:
+        log_file = log_file.strip()
+        if log_file == "":
+            log_file = None
+        else:
+            log_file = os.path.expanduser(log_file)
+
     cfg = Config(
         api_base_url=os.getenv("DSA_API_BASE_URL", "http://127.0.0.1:8000"),
         auth_enabled=_get_bool("DSA_API_AUTH_ENABLED", False),
@@ -89,6 +108,9 @@ def load_config() -> Config:
         api_timeout=float(_get_int("DSA_API_TIMEOUT", 30)),
         api_request_timeout=float(_get_int("DSA_API_REQUEST_TIMEOUT", 600)),
         log_level=os.getenv("DSA_MCP_LOG_LEVEL", "INFO").upper(),
+        log_file=log_file,
+        log_max_bytes=_get_int("DSA_MCP_LOG_MAX_BYTES", 10 * 1024 * 1024),
+        log_backup_count=_get_int("DSA_MCP_LOG_BACKUP_COUNT", 3),
     )
     cfg.validate()
     return cfg

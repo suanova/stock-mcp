@@ -64,6 +64,21 @@ DSA_API_BASE_URL=http://127.0.0.1:8000 DSA_API_AUTH_ENABLED=true DSA_API_PASSWOR
 | `DSA_API_TIMEOUT` | `30` | Timeout for short calls (skills, login) |
 | `DSA_API_REQUEST_TIMEOUT` | `600` | Timeout for `ask_stock` (agent chat) |
 | `DSA_MCP_ALLOWED_HOSTS` | *(empty)* | Comma-separated extra Host header values allowed by DNS rebinding protection. Localhost entries are always included. |
+| `DSA_MCP_LOG_FILE` | *(empty)* | If set, also write logs to this file path. Parent directories are created automatically. |
+| `DSA_MCP_LOG_MAX_BYTES` | `10485760` | Rotate the log file when it reaches this size in bytes. `0` disables rotation. |
+| `DSA_MCP_LOG_BACKUP_COUNT` | `3` | Number of rotated log files to keep. |
+
+### Logging to a file
+
+By default logs go to stderr only. To also persist them to a file with rotation:
+
+```bash
+export DSA_MCP_LOG_FILE=/var/log/stock-mcp/server.log
+export DSA_MCP_LOG_LEVEL=INFO
+python -m stock_mcp
+```
+
+Logs are then written to both stderr and `DSA_MCP_LOG_FILE`. Set `DSA_MCP_LOG_MAX_BYTES=0` for a single ever-growing file.
 
 ## Client configuration
 

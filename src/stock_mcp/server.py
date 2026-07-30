@@ -12,7 +12,10 @@ from __future__ import annotations
 
 import json
 import logging
+import logging.handlers
 import os
+import sys
+from pathlib import Path
 from typing import Any, Optional
 
 from mcp.server.fastmcp import FastMCP
@@ -24,11 +27,56 @@ from stock_mcp.dsa_client import DSAClient, DSAClientError
 logger = logging.getLogger("stock_mcp")
 
 
-def _setup_logging(level: str) -> None:
-    logging.basicConfig(
-        level=getattr(logging, level, logging.INFO),
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+_CONSOLE_FMT = "%(asctime)s %(levelname)s %(name)s: %(message)s"
+_FILE_FMT = "%(asctime)s %(levelname)s [%(name)s:%(lineno)d] %(message)s"
+
+
+def _setup_logging(
+    level: str,
+    log_file: Optional[str] = None,
+    log_max_bytes: int = 10 * 1024 * 1024,
+    log_backup_count: int = 3,
+) -> None:
+    """Configure root logging to stderr and optionally to a file.
+
+    When ``log_file`` is provided, logs are written to both stderr and the file.
+    The file handler rotates when ``log_max_bytes`` is exceeded; set it to ``0``
+    for a plain ever-growing file.
+    """
+    root = logging.getLogger()
+    root.setLevel(getattr(logging, level, logging.INFO))
+
+    # Avoid duplicate stderr handlers if _setup_logging is called more than once.
+    has_console = any(
+        isinstance(h, logging.StreamHandler) and h.stream is sys.stderr
+        for h in root.handlers
     )
+    if not has_console:
+        console = logging.StreamHandler(sys.stderr)
+        console.setFormatter(logging.Formatter(_CONSOLE_FMT))
+        root.addHandler(console)
+
+    if log_file:
+        log_path = Path(log_file)
+        try:
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            logger.warning(
+                "Could not create log directory %s: %s", log_path.parent, exc
+            )
+        else:
+            if log_max_bytes > 0:
+                fh: logging.Handler = logging.handlers.RotatingFileHandler(
+                    log_path,
+                    maxBytes=log_max_bytes,
+                    backupCount=log_backup_count,
+                    encoding="utf-8",
+                )
+            else:
+                fh = logging.FileHandler(log_path, encoding="utf-8")
+            fh.setFormatter(logging.Formatter(_FILE_FMT))
+            root.addHandler(fh)
+
     # Quiet noisy HTTP loggers; stock-mcp logs its own call summaries.
     for noisy in ("httpx", "httpcore", "mcp"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
@@ -175,7 +223,12 @@ def build_server(config: Config, client: DSAClient) -> FastMCP:
 def run() -> None:
     """Load config, build the DSA client, and serve the MCP server over Streamable HTTP."""
     config = load_config()
-    _setup_logging(config.log_level)
+    _setup_logging(
+        config.log_level,
+        config.log_file,
+        config.log_max_bytes,
+        config.log_backup_count,
+    )
     logger.info(
         "stock-mcp starting: DSA API at %s (auth=%s), MCP at http://%s:%d%s",
         config.api_base,
@@ -204,14 +257,17 @@ def run() -> None:
 
     app = mcp.streamable_http_app()
 
+    # The MCP Streamable HTTP endpoint is served at the app root; clients use
+    # http://<host>:<port><mcp_path>. We expose mcp_path as the expected client URL
+    # and log it; FastMCP's streamable_http_app serves at "/" by default.
+    # log_config=None lets uvicorn propagate to our root handlers so file logging
+    # also captures uvicorn/access logs.
     uvicorn.run(
         app,
         host=config.mcp_host,
         port=config.mcp_port,
         log_level=config.log_level.lower(),
-        # The MCP Streamable HTTP endpoint is served at the app root; clients use
-        # http://<host>:<port><mcp_path>. We expose mcp_path as the expected client URL
-        # and log it; FastMCP's streamable_http_app serves at "/" by default.
+        log_config=None,
     )
     logger.info(
         "stock-mcp listening at http://%s:%d (MCP endpoint: %s)",
