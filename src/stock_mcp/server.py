@@ -90,6 +90,72 @@ _client: Optional[DSAClient] = None
 _config: Optional[Config] = None
 
 
+def _optional_jsonrpc_id_middleware(app):
+    """ASGI middleware that auto-adds ``id`` to JSON-RPC requests missing it.
+
+    In "sync" stateless mode each HTTP request is its own MCP session and the
+    response is returned directly on the same HTTP connection. The JSON-RPC
+    ``id`` is still required by the MCP SDK for regular requests, but it is not
+    useful to the caller because the response is already paired with the HTTP
+    request. This middleware supplies ``id: 0`` when omitted so curl users do
+    not have to generate one.
+    """
+
+    async def middleware(scope, receive, send):
+        if scope.get("type") != "http":
+            await app(scope, receive, send)
+            return
+
+        # Collect the full request body.
+        body_parts = []
+        more_body = True
+        while more_body:
+            message = await receive()
+            body_parts.append(message.get("body", b""))
+            more_body = message.get("more_body", False)
+        body = b"".join(body_parts)
+
+        # If the body is a JSON-RPC request without an id, add a synthetic one.
+        try:
+            data = json.loads(body)
+            if (
+                isinstance(data, dict)
+                and data.get("jsonrpc") == "2.0"
+                and "method" in data
+                and "id" not in data
+            ):
+                data["id"] = 0
+                body = json.dumps(data, separators=(",", ":")).encode("utf-8")
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+        # Update the Content-Length header in scope if it was present.
+        new_headers = []
+        content_length_set = False
+        for name, value in scope.get("headers", []):
+            if name.lower() == b"content-length":
+                new_headers.append((name, str(len(body)).encode("latin-1")))
+                content_length_set = True
+            else:
+                new_headers.append((name, value))
+        if not content_length_set:
+            new_headers.append((b"content-length", str(len(body)).encode("latin-1")))
+        scope["headers"] = new_headers
+
+        body_sent = False
+
+        async def new_receive():
+            nonlocal body_sent
+            if not body_sent:
+                body_sent = True
+                return {"type": "http.request", "body": body, "more_body": False}
+            return {"type": "http.request", "body": b"", "more_body": False}
+
+        await app(scope, new_receive, send)
+
+    return middleware
+
+
 def build_server(config: Config, client: DSAClient) -> FastMCP:
     """Construct the FastMCP server with tools wired to the given DSA client.
 
@@ -125,6 +191,7 @@ def build_server(config: Config, client: DSAClient) -> FastMCP:
             ],
         ),
         stateless_http=config.mcp_stateless_http,
+        json_response=config.mcp_stateless_http,
     )
 
     @mcp.tool()
@@ -259,6 +326,8 @@ def run() -> None:
     # The path FastMCP mounts the Streamable HTTP app at is controlled via run() kwargs
     # in newer SDK versions; mount_path must be URL-safe and start with '/'.
     app = mcp.streamable_http_app()
+    if config.mcp_stateless_http:
+        app = _optional_jsonrpc_id_middleware(app)
 
     # The MCP Streamable HTTP endpoint is served at the app root; clients use
     # http://<host>:<port><mcp_path>. We expose mcp_path as the expected client URL
