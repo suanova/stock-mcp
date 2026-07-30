@@ -18,6 +18,7 @@ import sys
 from pathlib import Path
 from typing import Any, Optional
 
+from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 
@@ -222,6 +223,7 @@ def build_server(config: Config, client: DSAClient) -> FastMCP:
 
 def run() -> None:
     """Load config, build the DSA client, and serve the MCP server over Streamable HTTP."""
+    load_dotenv()
     config = load_config()
     _setup_logging(
         config.log_level,

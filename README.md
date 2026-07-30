@@ -38,6 +38,12 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
+Or install from `requirements.txt`:
+
+```bash
+pip install -r requirements-dev.txt
+```
+
 ## Run
 
 ```bash
@@ -52,6 +58,8 @@ DSA_API_BASE_URL=http://127.0.0.1:8000 DSA_API_AUTH_ENABLED=true DSA_API_PASSWOR
 ```
 
 ## Environment variables
+
+`stock-mcp` reads `.env` from the working directory automatically, or you can export variables directly.
 
 | Variable | Default | Description |
 |---|---|---|
